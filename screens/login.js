@@ -2,7 +2,7 @@ import React, { Component } from "react";
 import { StyleSheet, Text, View, Image } from "react-native";
 import { TextInput, Button, Snackbar } from "react-native-paper";
 
-import firebase from "../firebase";
+import FirebaseHelper from "../firebaseHelper";
 
 export default class TelaLogin extends Component {
   constructor(props) {
@@ -36,108 +36,71 @@ export default class TelaLogin extends Component {
     let email = this.state.email.trim();
     let emailvalido = await this.validate(email);
 
-    if (!emailvalido) {
-      this.setState({
-        snackMensagem: "Por favor, insira um e-mail válido!",
-        snackVisivel: true,
-      });
-    } else {
-      firebase
-        .auth()
-        .sendPasswordResetEmail(email)
-        .then(() => {
-          this.setState({
-            snackMensagem:
-              "Um e-mail de recuperação foi enviado ao seu e-mail!",
-            snackVisivel: true,
-          });
-        })
-        .catch((error) => {
-          console.log(error);
-          let codigo = error.code;
+    let msgErro = "";
+    let erro = !emailvalido;
 
-          if (codigo == "auth/user-not-found") {
-            this.setState({
-              snackMensagem:
-                "Não há nenhum usuário com este e-mail! Tente cadastrar-se.",
-              snackVisivel: true,
-            });
-          } else if (codigo == "auth/invalid-email") {
-            this.setState({
-              snackMensagem: "O e-mail inserido é inválido!",
-              snackVisivel: true,
-            });
-          } else {
-            this.setState({
-              snackMensagem:
-                "Ocorreu um erro ao enviar o e-mail! Por favor, tente novamente.",
-              snackVisivel: true,
-            });
-          }
-        });
+    if (!emailvalido) {
+      msgErro = "Por favor, insira um e-mail válido!";
     }
+
+    if (erro) {
+      this.setState({
+        snackMensagem: msgErro,
+        snackVisivel: erro
+      });
+      return null;
+    }
+
+    FirebaseHelper.esqueceuSenha({ email: email }, success => {
+      this.setState({
+        snackMensagem: success,
+        snackVisivel: true
+      });
+    }, error => {
+      this.setState({
+        snackMensagem: error,
+        snackVisivel: true
+      });
+    });
   }
 
   async fazerLogin() {
-    let email = this.state.email.trim();
-    let senha = this.state.senha.trim();
-    let emailvalido = await this.validate(email);
 
     this.setState({ botaoDisabled: true });
 
-    if (!emailvalido) {
-      this.setState({
-        snackMensagem: "Por favor, insira um e-mail válido!",
-        snackVisivel: true,
-        botaoDisabled: false,
-      });
-    } else if (senha.length < 6) {
-      this.setState({
-        snackMensagem:
-          "Por favor, insira uma senha com no mínimo 6 caracteres!",
-        snackVisivel: true,
-        botaoDisabled: false,
-      });
-    } else {
-      await firebase
-        .auth()
-        .signInWithEmailAndPassword(email, senha)
-        .then(() => {
-          this.props.navigation.navigate("Inicio");
-        })
-        .catch((error) => {
-          let codigo = error.code;
-          console.log(error.code);
+    let email = this.state.email.trim();
+    let senha = this.state.senha.trim();
+    let emailvalido = await this.validate(email);
+    let senhavalida = senha.length >= 6;
 
-          if (codigo == "auth/user-not-found") {
-            this.setState({
-              snackMensagem:
-                "Não há nenhum usuário com este e-mail! Tente cadastrar-se.",
-              snackVisivel: true,
-              botaoDisabled: false,
-            });
-          } else if (codigo == "auth/invalid-email") {
-            this.setState({
-              snackMensagem: "O e-mail inserido é inválido!",
-              snackVisivel: true,
-              botaoDisabled: false,
-            });
-          } else if (codigo == "auth/wrong-password") {
-            this.setState({
-              snackMensagem: "A senha inserida não está correta!",
-              snackVisivel: true,
-              botaoDisabled: false,
-            });
-          } else {
-            this.setState({
-              snackMensagem:
-                "Ocorreu um erro ao fazer login. Por favor, tente novamente.",
-              snackVisivel: true,
-              botaoDisabled: false,
-            });
-          }
-        });
+    let msgErro = "";
+    let erro = !emailvalido || !senhavalida;
+
+    if (!emailvalido) {
+      msgErro = "Por favor, insira um e-mail válido!";
+    } else if (!senhavalida) {
+      msgErro = "Por favor, insira uma senha com no mínimo 6 caracteres!";
     }
+
+    if (erro) {
+      this.setState({
+        snackMensagem: msgErro,
+        snackVisivel: erro,
+        botaoDisabled: !erro
+      });
+
+      return null;
+    }
+
+    FirebaseHelper.fazerLogin({ email: email, senha: senha }, () => {
+      this.props.navigation.navigate("Inicio");
+    }, erro => {
+      this.setState({
+        snackMensagem: erro,
+        snackVisivel: true,
+        botaoDisabled: false
+      });
+    });
   }
 
   render() {
@@ -146,7 +109,7 @@ export default class TelaLogin extends Component {
         <View style={styles.sombra}>
           <Image
             style={styles.header}
-            source={require("../images/header-login.png")}
+            source={require("../assets/header-login.png")}
           />
         </View>
         <View style={styles.tituloContainer}>
@@ -162,6 +125,7 @@ export default class TelaLogin extends Component {
               value={this.state.email}
               underlineColorAndroid="#ffffff00"
               underlineColor="#ffffff00"
+              theme={{ colors: { primary: '#FF6767', underlineColor: 'transparent', } }}
               style={styles.input}
               label="E-mail"
               left={<TextInput.Icon name="account" color="#AAAAAA" size={20} />}
@@ -172,6 +136,7 @@ export default class TelaLogin extends Component {
               underlineColorAndroid="#ffffff00"
               underlineColor="#ffffff00"
               style={styles.input}
+              theme={{ colors: { primary: '#FF6767', underlineColor: 'transparent', } }}
               secureTextEntry={true}
               label="Senha"
               left={<TextInput.Icon name="lock" color="#AAAAAA" size={20} />}
@@ -182,37 +147,25 @@ export default class TelaLogin extends Component {
                 flexDirection: "column",
                 justifyContent: "center",
                 alignItems: "center",
-                height: 60,
-              }}
-            >
+                height: 60
+              }}>
               <Text
                 style={styles.esqueceuSenha}
-                onPress={() => this.esqueceuSenha()}
-              >
-                Esqueceu sua senha?
+                onPress={() => this.esqueceuSenha()}>Esqueceu sua senha?
               </Text>
             </View>
 
             <Button
               style={styles.botao}
               onPress={() => this.fazerLogin()}
-              style={
-                !this.state.botaoDisabled
-                  ? styles.botao
-                  : styles.botaoDesativado
-              }
-              disabled={this.state.botaoDisabled}
-            >
+              style={!this.state.botaoDisabled ? styles.botao : styles.botaoDesativado}
+              disabled={this.state.botaoDisabled}>
               <Text style={styles.entrar}>ENTRAR</Text>
             </Button>
-
             <View style={styles.cadastrarView}>
               <Text
                 style={styles.cadastrar}
-                onPress={() => this.props.navigation.navigate("Cadastro")}
-              >
-                CADASTRAR
-              </Text>
+                onPress={() => this.props.navigation.navigate("Cadastro")}>CADASTRAR</Text>
             </View>
           </View>
         </View>
@@ -220,8 +173,7 @@ export default class TelaLogin extends Component {
         <Snackbar
           visible={this.state.snackVisivel}
           onDismiss={() => this.setState({ snackVisivel: false })}
-          action={{ label: "OK!" }}
-        >
+          action={{ label: "OK!" }}>
           {this.state.snackMensagem}
         </Snackbar>
       </View>
@@ -262,7 +214,7 @@ const styles = StyleSheet.create({
   },
   loginBackground: {
     width: "80%",
-    height: "55%",
+    height: "60%",
     borderRadius: 14,
     borderWidth: 0,
     borderColor: "#fff",
@@ -320,7 +272,7 @@ const styles = StyleSheet.create({
   botao: {
     height: 55,
     marginHorizontal: 25,
-    marginTop: 20,
+    marginTop: 5,
     borderWidth: 0,
     backgroundColor: "#FF6767",
     borderRadius: 8,
@@ -332,7 +284,7 @@ const styles = StyleSheet.create({
   botaoDesativado: {
     height: 55,
     marginHorizontal: 25,
-    marginTop: 20,
+    marginTop: 5,
     borderWidth: 0,
     backgroundColor: "#dbdbdb",
     borderRadius: 8,
@@ -350,7 +302,7 @@ const styles = StyleSheet.create({
     fontFamily: "Book",
     color: "#333",
     fontSize: 14,
-    marginTop: 20,
+    marginTop: 5,
   },
   cadastrarView: {
     flex: 1,

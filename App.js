@@ -10,6 +10,11 @@ const Stack = createStackNavigator();
 import telaLogin from "./screens/login";
 import telaCadastro from "./screens/cadastro";
 import telaInicio from "./screens/inicio";
+import telaAdicionarVaga from "./screens/adicionarVaga";
+import telaAdicionarFuncionario from "./screens/adicionarFuncionario";
+import telaDetalhesVaga from "./screens/detalhesVaga";
+import telaDetalhesFuncionario from "./screens/detalhesFuncionario";
+import telaPerfil from "./screens/perfil";
 
 import firebase from "./firebase";
 export default class App extends Component {
@@ -39,29 +44,40 @@ export default class App extends Component {
       return <AppLoading />;
     }
 
+    let opcoes = {
+      headerShown: false,
+    };
+
     return (
       <NavigationContainer>
         <Stack.Navigator initialRouteName={tela}>
-          <Stack.Screen
-            name="Login"
-            component={telaLogin}
-            options={{
-              headerShown: false,
-            }}
-          />
+          <Stack.Screen name="Login" component={telaLogin} options={opcoes} />
           <Stack.Screen
             name="Cadastro"
             component={telaCadastro}
-            options={{
-              headerShown: false,
-            }}
+            options={opcoes}
+          />
+          <Stack.Screen name="Inicio" component={telaInicio} options={opcoes} />
+          <Stack.Screen name="Perfil" component={telaPerfil} options={opcoes} />
+          <Stack.Screen
+            name="AdicionarVaga"
+            component={telaAdicionarVaga}
+            options={opcoes}
           />
           <Stack.Screen
-            name="Inicio"
-            component={telaInicio}
-            options={{
-              headerShown: false,
-            }}
+            name="AdicionarFuncionario"
+            component={telaAdicionarFuncionario}
+            options={opcoes}
+          />
+          <Stack.Screen
+            name="DetalhesFuncionario"
+            component={telaDetalhesFuncionario}
+            options={opcoes}
+          />
+          <Stack.Screen
+            name="DetalhesVaga"
+            component={telaDetalhesVaga}
+            options={opcoes}
           />
         </Stack.Navigator>
       </NavigationContainer>
